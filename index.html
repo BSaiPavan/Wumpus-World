@@ -24,8 +24,10 @@ button.go{background:var(--torch);border-color:#7a3b1c;color:#2a1608;font-size:1
 .cell.fog{background:var(--fog)}
 .cell.fog::after{content:"?";color:#2c2036;font:700 calc(var(--bw)/var(--n)*.5) Georgia,serif}
 .cell.seen{background:radial-gradient(circle at 50% 40%,var(--stone2),var(--stone))}
+.cell.aim{box-shadow:inset 0 0 0 2px rgba(255,179,71,.5)}
 .cell.here{box-shadow:inset 0 0 0 3px var(--torch),inset 0 0 26px rgba(255,179,71,.35)}
 .cell.exit{box-shadow:inset 0 0 0 3px var(--crystal),inset 0 0 28px rgba(78,205,196,.7);animation:pulse 1.2s infinite alternate}
+.cell.exit.locked{animation:none;box-shadow:inset 0 0 0 3px var(--ember),inset 0 0 22px rgba(239,91,58,.5)}
 .cell.zap{background:#ffe9a8!important;transition:none}
 @keyframes pulse{to{box-shadow:inset 0 0 0 3px var(--crystal),inset 0 0 8px rgba(78,205,196,.3)}}
 .it{font-size:min(2.6rem,calc(var(--bw)/var(--n)*.62));line-height:1;text-align:center}
@@ -36,7 +38,7 @@ body.dense .pc{left:1px;top:0;line-height:1;font-size:calc(var(--bw)/var(--n)*.3
 .co{position:absolute;right:5px;bottom:2px;font-size:.62rem;color:#8d7794}
 #agent{position:absolute;width:20%;height:20%;display:flex;align-items:center;justify-content:center;font-size:min(2.9rem,calc(var(--bw)/var(--n)*.66));transition:left .3s cubic-bezier(.34,1.45,.55,1),top .3s cubic-bezier(.34,1.45,.55,1);pointer-events:none;z-index:5;filter:drop-shadow(0 4px 3px rgba(0,0,0,.6))}
 #agent .face{position:absolute;inset:0;transition:transform .2s}
-#agent .face::after{content:"";position:absolute;right:1px;top:50%;margin-top:-.2em;border-left:.34em solid var(--torch);border-top:.2em solid transparent;border-bottom:.2em solid transparent}
+#agent .face::after{content:"";position:absolute;right:1px;top:50%;margin-top:-.28em;border-left:.46em solid var(--torch);border-top:.28em solid transparent;border-bottom:.28em solid transparent;filter:drop-shadow(0 0 3px #000)}
 #agent.fall{transition:transform .9s ease-in,opacity .9s;transform:scale(0) rotate(540deg);opacity:0}
 #shout{position:absolute;inset:0;display:none;align-items:center;justify-content:center;text-align:center;z-index:9;pointer-events:none;font:900 clamp(1.8rem,9vw,3.6rem)/1.05 Rockwell,Impact,Georgia,serif;padding:10px;-webkit-text-stroke:2px #1b1423;paint-order:stroke fill;text-shadow:0 5px 0 #1b1423}
 #shout.show{display:flex;animation:shout .5s ease-out both}
@@ -55,7 +57,7 @@ body.dense .pc{left:1px;top:0;line-height:1;font-size:calc(var(--bw)/var(--n)*.3
 .pl span{padding:5px 8px;border-radius:8px;background:#2a1f31;color:#6f5c77;font-size:.9rem;transition:.2s}
 .pl span.on{background:var(--torch);color:#2a1608;font-weight:700}
 #exitinfo{margin-top:8px;font-size:.92rem;color:var(--mut)}
-#exitinfo.on{color:var(--crystal);font-weight:700}
+#exitinfo.on{color:var(--crystal);font-weight:700}#exitinfo.lock{color:var(--ember);font-weight:700}
 #log{margin:0;padding:0;list-style:none;font-size:.9rem;min-height:7.6em}
 #log li{padding:2px 0;color:var(--mut)}#log li:first-child{color:var(--ink);font-weight:600}
 #pad{display:grid;grid-template-columns:repeat(3,64px);gap:6px;margin-top:14px}
@@ -93,7 +95,7 @@ kbd{background:var(--ink);color:#2a1608;border-radius:5px;padding:1px 7px;font-w
   </section>
   <aside id="side">
     <div class="box"><h3>Your status</h3>
-      <div class="stats"><div>Score <b id="sScore">0</b></div><div>Moves <b id="sMoves">0</b></div><div>Gold <b id="sGold">no</b></div><div>Arrow <b id="sArrow">0</b></div></div>
+      <div class="stats"><div>Score <b id="sScore">0</b></div><div>Moves <b id="sMoves">0</b></div><div>Gold <b id="sGold">no</b></div><div>Arrow <b id="sArrow">0</b></div><div>NDG <b id="sNdg">alive</b></div></div>
       <div id="exitinfo">Grab the 💰 to open the exit door.</div>
     </div>
     <div class="box"><h3>What you sense here</h3>
@@ -145,8 +147,8 @@ function reach(from,pits,wk){ // BFS avoiding pits (and the wumpus square), retu
 }
 function newGame(){
   const w=gen();
-  S={...w,pos:[N-1,0],d:0,seen:new Set([key(N-1,0)]),score:0,moves:0,arrows:0,hasGold:false,arrowTaken:false,wAlive:true,exit:null,over:false,bump:false,scream:false,log:[]};
-  $('board').classList.remove('dead');$('agent').classList.remove('fall');$('shout').className='';
+  S={...w,pos:[N-1,0],d:0,ang:0,seen:new Set([key(N-1,0)]),score:0,moves:0,arrows:0,hasGold:false,arrowTaken:false,wAlive:true,exit:null,over:false,bump:false,scream:false,log:[]};
+  busy=false;$('board').classList.remove('dead');$('agent').classList.remove('fall');$('shout').className='';
   grid();log('You step into the cave at A1. Stay sharp!');render();
 }
 function grid(){
@@ -161,25 +163,26 @@ function log(t){S.log.unshift(t);S.log=S.log.slice(0,6)}
 
 /* ---------- render ---------- */
 function render(){
+  const aim=new Set();if(S.arrows&&!S.over){let q=S.pos[0],w=S.pos[1];for(;;){q+=D[S.d][0];w+=D[S.d][1];if(q<0||w<0||q>=N||w>=N)break;aim.add(key(q,w))}}
   for(let r=0;r<N;r++)for(let c=0;c<N;c++){
     const k=key(r,c),e=cells[k],isExit=S.exit===k,vis=S.seen.has(k)||S.over||isExit;
-    e.className='cell '+(vis?'seen':'fog')+(isExit?' exit':'')+(S.pos[0]===r&&S.pos[1]===c&&!S.over?' here':'');
+    e.className='cell '+(vis?'seen':'fog')+(isExit?' exit':'')+(S.pos[0]===r&&S.pos[1]===c&&!S.over?' here':'')+(aim.has(k)?' aim':'')+(isExit&&S.wAlive?' locked':'');
     let it='',pc='';
     if(vis){
       if(S.pits.has(k))it+='🕳️';
       if(S.w[0]===r&&S.w[1]===c)it+=S.wAlive?'👹<small>NDG</small>':'💀<small>NDG</small>';
       if(S.gold[0]===r&&S.gold[1]===c&&!S.hasGold)it+='💰';
       if(S.arrow[0]===r&&S.arrow[1]===c&&!S.arrowTaken)it+='🏹';
-      if(isExit)it+='🚪';
+      if(isExit)it+=S.wAlive?'🔒':'🚪';
       if(S.seen.has(k)||S.over){const p=pcpt(r,c);pc=(p.breeze?'💨':'')+(p.stench?'🤢':'')+(p.glitter?'✨':'')}
     }
     e.children[0].textContent=pc;e.children[1].innerHTML=it;
   }
-  const a=$('agent');a.style.left=S.pos[1]*100/N+'%';a.style.top=S.pos[0]*100/N+'%';a.firstElementChild.style.transform='rotate('+S.d*90+'deg)';
+  const a=$('agent');a.style.left=S.pos[1]*100/N+'%';a.style.top=S.pos[0]*100/N+'%';a.firstElementChild.style.transform='rotate('+S.ang+'deg)';
   const p=pcpt(...S.pos);
   [['pBreeze',p.breeze],['pStench',p.stench],['pGlitter',p.glitter],['pBump',S.bump],['pScream',S.scream]].forEach(([i,v])=>$(i).classList.toggle('on',!!v));
-  $('sScore').textContent=S.score;$('sMoves').textContent=S.moves;$('sGold').textContent=S.hasGold?'yes 💰':'no';$('sArrow').textContent=S.arrows?'1 🏹':'0';
-  const x=$('exitinfo');x.className=S.exit!==null?'on':'';x.textContent=S.exit!==null?'🚪 Exit door is at '+lab(S.exit)+'. Get there alive!':'Grab the 💰 to open the exit door.';
+  $('sScore').textContent=S.score;$('sMoves').textContent=S.moves;$('sGold').textContent=S.hasGold?'yes 💰':'no';$('sArrow').textContent=S.arrows?'1 🏹':'0';$('sNdg').textContent=S.wAlive?'alive 👹':'dead 💀';
+  const x=$('exitinfo');x.className=S.exit===null?'':(S.wAlive?'lock':'on');x.textContent=S.exit===null?(S.wAlive?'Grab the 💰 and kill NDG with your arrow to unlock the exit.':'NDG is dead. Now grab the 💰 to open the exit.'):(S.wAlive?'🔒 Exit at '+lab(S.exit)+' is locked. Shoot NDG with your arrow to unlock it.':'🚪 Exit door at '+lab(S.exit)+' is open. Get there alive!');
   $('log').innerHTML=S.log.map(t=>'<li>'+t+'</li>').join('');
 }
 function shout(t,cls){const s=$('shout');s.textContent=t;s.className='';void s.offsetWidth;s.className='show '+cls}
@@ -189,28 +192,41 @@ function shake(){const b=$('board');b.classList.remove('shake');void b.offsetWid
 function live(){return started&&S&&!S.over&&$('ov').style.display!=='flex'}
 function move(d){
   if(!live())return;
-  S.bump=false;S.scream=false;S.d=d;
+  S.bump=false;S.scream=false;
   const [r,c]=S.pos,nr=r+D[d][0],nc=c+D[d][1];
   if(nr<0||nc<0||nr>=N||nc>=N){S.bump=true;log('💥 Bump! A cold stone wall.');snd(140,60,.15,'square');shake();return render()}
   S.pos=[nr,nc];S.moves++;S.score--;const k=key(nr,nc);S.seen.add(k);snd(320,420,.08,'triangle',.05);
   if(S.pits.has(k)){render();return die('pit')}
   if(S.wAlive&&S.w[0]===nr&&S.w[1]===nc){render();return die('wumpus')}
-  if(S.hasGold&&S.exit===k){render();return win()}
+  if(S.hasGold&&S.exit===k){if(!S.wAlive){render();return win()}log('🔒 The exit is locked! Shoot NDG with your arrow first.');snd(150,90,.2,'square',.06);return render()}
   const p=pcpt(nr,nc),s=[];
   if(p.breeze)s.push('a breeze 💨 (pit nearby)');if(p.stench)s.push('a stench 🤢 (NDG is close)');if(p.glitter)s.push('glitter ✨ (press G!)');
   if(S.arrow[0]===nr&&S.arrow[1]===nc&&!S.arrowTaken)s.push('an arrow 🏹 on the floor (press G)');
   log(lab(k)+': '+(s.length?'you sense '+s.join(', ')+'.':'all quiet.'));
   render();
 }
+let busy=false;
+function press(d,turnOnly){
+  if(!live()||busy)return;
+  if(S.d!==d){
+    const diff=(d-S.d+4)%4;S.ang+=(diff===3?-1:diff)*90;S.d=d;S.bump=false;S.scream=false;
+    snd(220,320,.08,'triangle',.04);busy=true;render();
+    setTimeout(()=>{busy=false;if(!turnOnly)move(d)},200);return;
+  }
+  if(!turnOnly)move(d);
+}
+function placeExit(){
+  const [r,c]=S.pos,d=reach(S.pos,S.pits,S.wAlive?key(...S.w):-1);d.delete(key(r,c));
+  let opts=[...d].filter(([k,v])=>v>=2).map(x=>x[0]);if(!opts.length)opts=[...d].map(x=>x[0]);
+  S.exit=opts.length?opts[Math.floor(Math.random()*opts.length)]:key(N-1,0);
+}
 function grab(){
   if(!live())return;S.bump=false;S.scream=false;
   const [r,c]=S.pos;
   if(!S.hasGold&&S.gold[0]===r&&S.gold[1]===c){
     S.hasGold=true;S.score+=1000;snd(600,1200,.35,'triangle',.1);
-    const d=reach(S.pos,S.pits,S.wAlive?key(...S.w):-1);d.delete(key(r,c));
-    let opts=[...d].filter(([k,v])=>v>=2).map(x=>x[0]);if(!opts.length)opts=[...d].map(x=>x[0]);
-    S.exit=opts.length?opts[Math.floor(Math.random()*opts.length)]:key(N-1,0);
-    log('💰 Gold grabbed! +1000. The exit door opened at '+lab(S.exit)+'.');shout('GOLD!','warn');setTimeout(()=>{if(!S.over)$('shout').className=''},900);
+    placeExit();
+    log(S.wAlive?'💰 Gold grabbed! +1000. Exit shown at '+lab(S.exit)+', but it is 🔒 locked until you kill NDG.':'💰 Gold grabbed! +1000. NDG is dead, so the exit door at '+lab(S.exit)+' is open.');shout('GOLD!','warn');setTimeout(()=>{if(!S.over)$('shout').className=''},900);
   }else if(!S.arrowTaken&&S.arrow[0]===r&&S.arrow[1]===c){
     S.arrowTaken=true;S.arrows=1;snd(500,800,.2,'triangle',.08);log('🏹 You picked up the arrow. Press Space to shoot.');
   }else{log('Nothing to grab here.');snd(150,100,.1,'square',.04)}
@@ -223,10 +239,11 @@ function shoot(){
   let [r,c]=S.pos,hit=false;const path=[];
   for(;;){r+=D[S.d][0];c+=D[S.d][1];if(r<0||c<0||r>=N||c>=N)break;path.push(key(r,c));if(S.wAlive&&S.w[0]===r&&S.w[1]===c)hit=true}
   path.forEach((k,i)=>setTimeout(()=>{cells[k].classList.add('zap');setTimeout(()=>cells[k].classList.remove('zap'),300)},i*90));
-  if(hit){S.wAlive=false;S.scream=true;log('😱 NDG lets out a horrible scream. The Wumpus is dead!');
+  if(hit){S.wAlive=false;S.scream=true;log('😱 NDG screams and dies!'+(S.hasGold?' The exit door 🚪 is now unlocked.':' Now go grab the 💰.'));
     setTimeout(()=>{snd(500,70,.9,'sawtooth',.12);shout('NDG: AAAARGH!','warn');say('Aaaargh!',.3);setTimeout(()=>{if(!S.over)$('shout').className=''},1300)},path.length*90)}
-  else log('🏹 Your arrow flies off into the dark and hits nothing.');
+  else{const dd=reach(S.pos,S.pits,S.wAlive?key(...S.w):-1);let land=S.pos;for(const k of path)if(dd.has(k))land=[Math.floor(k/N),k%N];S.arrow=land;S.arrowTaken=false;S.seen.add(key(...land));log('🏹 Missed! The arrow dropped at '+lab(key(...land))+'. Walk there, press G to pick it up and try again.')}
   render();
+  if(hit&&S.hasGold&&S.exit===key(...S.pos))setTimeout(()=>{if(!S.over)win()},path.length*90+1500);
 }
 function die(type){
   S.over=true;S.score-=1000;
@@ -241,21 +258,21 @@ function die(type){
 function win(){
   S.over=true;snd(400,1600,.6,'triangle',.1);setTimeout(()=>snd(800,1800,.5,'triangle',.1),250);
   log('🚪 You escaped with the gold!');shout('ESCAPED!','good');say('Yes! I escaped with the gold!',1.5);render();
-  setTimeout(()=>showOv('<h2>🏆 You escaped!</h2><p class="big">You grabbed the gold and walked out through the exit at '+lab(S.exit)+'.</p><p>Final score: <b>'+S.score+'</b> in '+S.moves+' moves'+(S.wAlive?'. NDG is still alive, you outwitted it.':'. You even slew NDG!')+'</p><div class="btns"><button class="go" id="bGo">Play again (Enter)</button></div>',begin),1900);
+  setTimeout(()=>showOv('<h2>🏆 You escaped!</h2><p class="big">You grabbed the gold, killed NDG and walked out through the exit at '+lab(S.exit)+'.</p><p>Final score: <b>'+S.score+'</b> in '+S.moves+' moves'+'.'+'</p><div class="btns"><button class="go" id="bGo">Play again (Enter)</button></div>',begin),1900);
 }
 
 /* ---------- overlay & input ---------- */
 const RULES=()=>'<h2>📜 NDG Wumpus World: Rules</h2><ol>'+
-'<li><b>Goal:</b> grab the 💰 gold, then reach the 🚪 exit door that opens after you take it.</li>'+
+'<li><b>Goal:</b> grab the 💰 gold <b>and</b> kill NDG with your arrow, then reach the 🚪 exit door.</li>'+
 '<li><b>The cave:</b> a '+N+'×'+N+' grid (change it with the Grid size slider, from 5×5 up to 20×20). You start at <b>A1</b> (bottom-left). Unexplored squares sit in fog.</li>'+
 '<li><b>Pits 🕳️</b> ('+pitCount()+' of them): step in and you fall. Squares next to a pit have a <b>breeze 💨</b>.</li>'+
 '<li><b>NDG the Wumpus 👹:</b> walk into its square and it eats you. Squares next to it have a <b>stench 🤢</b>.</li>'+
 '<li><b>Grabbing:</b> ✨ glitter means gold is on your square. Press <kbd>G</kbd> to grab it. The same <kbd>G</kbd> picks up the lone 🏹 arrow lying somewhere in the cave.</li>'+
-'<li><b>Shooting:</b> with the arrow, press <kbd>Space</kbd> to fire the way you’re facing (the yellow marker). Hit NDG and you’ll hear it scream. You only get one arrow.</li>'+
-'<li><b>The exit:</b> after you grab the gold, a 🚪 door appears on a safe square, and it isn’t always the start. Walk there to escape.</li>'+
+'<li><b>Shooting:</b> with the arrow, press <kbd>Space</kbd> to fire the way you’re facing (the yellow pointer; the squares in your line of fire glow). Hit NDG and it screams and dies. Miss, and the arrow drops on the floor: find it, press <kbd>G</kbd> and try again.</li>'+
+'<li><b>The exit:</b> once you grab the gold, the exit is shown on a safe square (not always the start). It stays 🔒 locked until NDG is dead. You can only leave with the gold <b>and</b> a dead NDG; reach the door too early and nothing happens.</li>'+
 '<li><b>Dying:</b> fall into a pit or meet NDG and the agent screams. 😱</li>'+
 '<li><b>Score:</b> −1 per move, −10 for shooting, +1000 for gold, −1000 for dying.</li></ol>'+
-'<div class="ctl"><b>Move:</b> arrow keys or <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><br><b>Grab:</b> <kbd>G</kbd> &nbsp; <b>Shoot:</b> <kbd>Space</kbd> &nbsp; <b>New cave:</b> <kbd>R</kbd></div>';
+'<div class="ctl"><b>Move:</b> arrow keys or <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> (the agent turns first, then steps)<br><b>Turn only:</b> hold <kbd>Shift</kbd> + arrow, to aim without moving<br><b>Grab:</b> <kbd>G</kbd> &nbsp; <b>Shoot:</b> <kbd>Space</kbd> &nbsp; <b>New cave:</b> <kbd>R</kbd></div>';
 function showOv(html,act){$('card').innerHTML=html;$('ov').style.display='flex';ovAct=act;const b=$('bGo');if(b){b.onclick=act;b.focus()}}
 function hideOv(){$('ov').style.display='none';ovAct=null}
 function begin(){started=true;hideOv();newGame();snd(300,600,.2,'triangle',.06)}
@@ -267,20 +284,23 @@ const KM={arrowright:0,d:0,arrowdown:1,s:1,arrowleft:2,a:2,arrowup:3,w:3};
 addEventListener('keydown',e=>{
   const k=e.key.toLowerCase();
   if(e.target&&e.target.id==='size')return;
+  if(document.activeElement&&document.activeElement.tagName==='BUTTON')document.activeElement.blur();
   if($('ov').style.display==='flex'){if(e.key==='Enter'&&ovAct){e.preventDefault();ovAct()}return}
   if(e.ctrlKey||e.metaKey||e.altKey)return;
-  if(k in KM){e.preventDefault();move(KM[k])}
+  if(k in KM){e.preventDefault();press(KM[k],e.shiftKey)}
   else if(k==='g')grab();
   else if(k===' '||k==='f'){e.preventDefault();shoot()}
   else if(k==='r')begin();
 });
-document.querySelectorAll('#pad button').forEach(b=>b.onclick=()=>{const k=b.dataset.k;if(k==='g')grab();else if(k==='shoot')shoot();else move({right:0,down:1,left:2,up:3}[k])});
+document.querySelectorAll('#pad button').forEach(b=>b.onclick=()=>{const k=b.dataset.k;if(k==='g')grab();else if(k==='shoot')shoot();else press({right:0,down:1,left:2,up:3}[k])});
 $('size').oninput=e=>{$('sizeLbl').textContent=e.target.value+'×'+e.target.value};
 $('size').onchange=e=>{setSize(+e.target.value);e.target.blur();begin()};
+document.addEventListener('click',e=>{if(e.target.matches&&e.target.matches('#pad button,.top button'))e.target.blur()});
+$('size').onpointerup=e=>setTimeout(()=>e.target.blur(),60);
 $('bRules').onclick=help;$('bNew').onclick=begin;
 $('bMute').onclick=()=>{muted=!muted;$('bMute').textContent=muted?'🔇 Muted':'🔊 Sound';if(muted&&window.speechSynthesis)speechSynthesis.cancel()};
 
-setSize(5);grid();S={pits:new Set(),w:[-1,-1],gold:[-1,-1],arrow:[-1,-1],pos:[N-1,0],d:0,seen:new Set([key(N-1,0)]),score:0,moves:0,arrows:0,hasGold:false,arrowTaken:false,wAlive:true,exit:null,over:false,log:[]};
+setSize(5);grid();S={pits:new Set(),w:[-1,-1],gold:[-1,-1],arrow:[-1,-1],pos:[N-1,0],d:0,ang:0,seen:new Set([key(N-1,0)]),score:0,moves:0,arrows:0,hasGold:false,arrowTaken:false,wAlive:true,exit:null,over:false,log:[]};
 render();help();
 </script>
 </body>
