@@ -206,14 +206,13 @@ function move(d){
   render();
 }
 let busy=false;
-function press(d,turnOnly){
-  if(!live()||busy)return;
-  if(S.d!==d){
+function press(d){
+  if(!live())return;
+  if(S.d!==d){ // different direction: only turn, no step
     const diff=(d-S.d+4)%4;S.ang+=(diff===3?-1:diff)*90;S.d=d;S.bump=false;S.scream=false;
-    snd(220,320,.08,'triangle',.04);busy=true;render();
-    setTimeout(()=>{busy=false;if(!turnOnly)move(d)},200);return;
+    snd(220,320,.08,'triangle',.04);return render();
   }
-  if(!turnOnly)move(d);
+  move(d); // already facing that way: step forward
 }
 function placeExit(){
   const [r,c]=S.pos,d=reach(S.pos,S.pits,S.wAlive?key(...S.w):-1);d.delete(key(r,c));
@@ -272,7 +271,7 @@ const RULES=()=>'<h2>📜 NDG Wumpus World: Rules</h2><ol>'+
 '<li><b>The exit:</b> once you grab the gold, the exit is shown on a safe square (not always the start). It stays 🔒 locked until NDG is dead. You can only leave with the gold <b>and</b> a dead NDG; reach the door too early and nothing happens.</li>'+
 '<li><b>Dying:</b> fall into a pit or meet NDG and the agent screams. 😱</li>'+
 '<li><b>Score:</b> −1 per move, −10 for shooting, +1000 for gold, −1000 for dying.</li></ol>'+
-'<div class="ctl"><b>Move:</b> arrow keys or <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> (the agent turns first, then steps)<br><b>Turn only:</b> hold <kbd>Shift</kbd> + arrow, to aim without moving<br><b>Grab:</b> <kbd>G</kbd> &nbsp; <b>Shoot:</b> <kbd>Space</kbd> &nbsp; <b>New cave:</b> <kbd>R</kbd></div>';
+'<div class="ctl"><b>Move:</b> arrow keys or <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> (press a new direction once to <b>turn</b>, press it again to <b>step</b>)<br><b>Grab:</b> <kbd>G</kbd> &nbsp; <b>Shoot:</b> <kbd>Space</kbd> &nbsp; <b>New cave:</b> <kbd>R</kbd></div>';
 function showOv(html,act){$('card').innerHTML=html;$('ov').style.display='flex';ovAct=act;const b=$('bGo');if(b){b.onclick=act;b.focus()}}
 function hideOv(){$('ov').style.display='none';ovAct=null}
 function begin(){started=true;hideOv();newGame();snd(300,600,.2,'triangle',.06)}
@@ -287,7 +286,7 @@ addEventListener('keydown',e=>{
   if(document.activeElement&&document.activeElement.tagName==='BUTTON')document.activeElement.blur();
   if($('ov').style.display==='flex'){if(e.key==='Enter'&&ovAct){e.preventDefault();ovAct()}return}
   if(e.ctrlKey||e.metaKey||e.altKey)return;
-  if(k in KM){e.preventDefault();press(KM[k],e.shiftKey)}
+  if(k in KM){e.preventDefault();press(KM[k])}
   else if(k==='g')grab();
   else if(k===' '||k==='f'){e.preventDefault();shoot()}
   else if(k==='r')begin();
