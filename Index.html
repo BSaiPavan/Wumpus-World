@@ -5,36 +5,38 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>NDG Wumpus World</title>
 <style>
-:root{--cave:#1b1423;--stone:#3a2c3e;--stone2:#4a3850;--fog:#120c18;--ink:#f6ecdf;--mut:#b7a6bd;--torch:#ffb347;--ember:#ef5b3a;--crystal:#4ecdc4;--line:#5a4560}
+:root{--bw:min(94vw,540px);--n:5;--cave:#1b1423;--stone:#3a2c3e;--stone2:#4a3850;--fog:#120c18;--ink:#f6ecdf;--mut:#b7a6bd;--torch:#ffb347;--ember:#ef5b3a;--crystal:#4ecdc4;--line:#5a4560}
 *{box-sizing:border-box}
 html,body{margin:0}
 body{min-height:100vh;color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:radial-gradient(ellipse at 50% -10%,#4b2f57 0,#241a2c 45%,var(--cave) 100%) fixed;display:flex;flex-direction:column;align-items:center;padding:10px 10px 90px}
 header{text-align:center;margin:6px 0 4px}
 h1{margin:0;font:800 clamp(1.8rem,6vw,3rem)/1 Rockwell,"Roboto Slab",Georgia,serif;letter-spacing:.02em;color:var(--torch);text-shadow:0 3px 0 #7a3b1c,0 0 28px rgba(255,179,71,.45)}
 header p{margin:6px 0 0;color:var(--mut);font-size:.95rem}
-.top{display:flex;gap:8px;justify-content:center;margin:8px 0}
+.top{display:flex;flex-wrap:wrap;align-items:center;gap:8px;justify-content:center;margin:8px 0}
 button{font:inherit;cursor:pointer;border:2px solid var(--line);background:var(--stone);color:var(--ink);padding:8px 14px;border-radius:10px;font-weight:600}
 button:hover{background:var(--stone2)}
 button:focus-visible{outline:3px solid var(--torch);outline-offset:2px}
 button.go{background:var(--torch);border-color:#7a3b1c;color:#2a1608;font-size:1.05rem;padding:10px 22px}
-.wrap{display:flex;gap:18px;flex-wrap:wrap;justify-content:center;width:100%;max-width:960px}
-#board{position:relative;width:min(94vw,540px);aspect-ratio:1;border:4px solid #6b4f72;border-radius:16px;overflow:hidden;background:var(--fog);box-shadow:0 18px 40px rgba(0,0,0,.55)}
+.wrap{display:flex;gap:18px;flex-wrap:wrap;justify-content:center;width:100%;max-width:1120px}
+#board{position:relative;width:var(--bw);aspect-ratio:1;border:4px solid #6b4f72;border-radius:16px;overflow:hidden;background:var(--fog);box-shadow:0 18px 40px rgba(0,0,0,.55)}
 #grid{position:absolute;inset:0;display:grid;grid-template-columns:repeat(5,1fr);grid-template-rows:repeat(5,1fr)}
 .cell{position:relative;border:1px solid rgba(0,0,0,.35);display:flex;flex-direction:column;align-items:center;justify-content:center;transition:background .5s,box-shadow .5s}
 .cell.fog{background:var(--fog)}
-.cell.fog::after{content:"?";color:#2c2036;font:700 clamp(1.4rem,5vw,2.2rem) Georgia,serif}
+.cell.fog::after{content:"?";color:#2c2036;font:700 calc(var(--bw)/var(--n)*.5) Georgia,serif}
 .cell.seen{background:radial-gradient(circle at 50% 40%,var(--stone2),var(--stone))}
 .cell.here{box-shadow:inset 0 0 0 3px var(--torch),inset 0 0 26px rgba(255,179,71,.35)}
 .cell.exit{box-shadow:inset 0 0 0 3px var(--crystal),inset 0 0 28px rgba(78,205,196,.7);animation:pulse 1.2s infinite alternate}
 .cell.zap{background:#ffe9a8!important;transition:none}
 @keyframes pulse{to{box-shadow:inset 0 0 0 3px var(--crystal),inset 0 0 8px rgba(78,205,196,.3)}}
-.it{font-size:clamp(1.4rem,6.4vw,2.5rem);line-height:1;text-align:center}
-.it small{display:block;font:800 clamp(.55rem,2vw,.8rem) Rockwell,Georgia,serif;color:var(--torch)}
-.pc{position:absolute;left:4px;top:2px;font-size:clamp(.65rem,2.6vw,1rem)}
+.it{font-size:min(2.6rem,calc(var(--bw)/var(--n)*.62));line-height:1;text-align:center}
+.it small{display:block;font:800 min(.8rem,calc(var(--bw)/var(--n)*.22)) Rockwell,Georgia,serif;color:var(--torch)}
+.pc{position:absolute;left:4px;top:2px;font-size:min(1rem,calc(var(--bw)/var(--n)*.26))}
+body.dense .co,body.dense .it small{display:none}
+body.dense .pc{left:1px;top:0;line-height:1;font-size:calc(var(--bw)/var(--n)*.34)}
 .co{position:absolute;right:5px;bottom:2px;font-size:.62rem;color:#8d7794}
-#agent{position:absolute;width:20%;height:20%;display:flex;align-items:center;justify-content:center;font-size:clamp(1.7rem,7.4vw,2.9rem);transition:left .3s cubic-bezier(.34,1.45,.55,1),top .3s cubic-bezier(.34,1.45,.55,1);pointer-events:none;z-index:5;filter:drop-shadow(0 4px 3px rgba(0,0,0,.6))}
+#agent{position:absolute;width:20%;height:20%;display:flex;align-items:center;justify-content:center;font-size:min(2.9rem,calc(var(--bw)/var(--n)*.66));transition:left .3s cubic-bezier(.34,1.45,.55,1),top .3s cubic-bezier(.34,1.45,.55,1);pointer-events:none;z-index:5;filter:drop-shadow(0 4px 3px rgba(0,0,0,.6))}
 #agent .face{position:absolute;inset:0;transition:transform .2s}
-#agent .face::after{content:"";position:absolute;right:1px;top:50%;margin-top:-7px;border-left:12px solid var(--torch);border-top:7px solid transparent;border-bottom:7px solid transparent}
+#agent .face::after{content:"";position:absolute;right:1px;top:50%;margin-top:-.2em;border-left:.34em solid var(--torch);border-top:.2em solid transparent;border-bottom:.2em solid transparent}
 #agent.fall{transition:transform .9s ease-in,opacity .9s;transform:scale(0) rotate(540deg);opacity:0}
 #shout{position:absolute;inset:0;display:none;align-items:center;justify-content:center;text-align:center;z-index:9;pointer-events:none;font:900 clamp(1.8rem,9vw,3.6rem)/1.05 Rockwell,Impact,Georgia,serif;padding:10px;-webkit-text-stroke:2px #1b1423;paint-order:stroke fill;text-shadow:0 5px 0 #1b1423}
 #shout.show{display:flex;animation:shout .5s ease-out both}
@@ -65,6 +67,8 @@ button.go{background:var(--torch);border-color:#7a3b1c;color:#2a1608;font-size:1
 kbd{background:var(--ink);color:#2a1608;border-radius:5px;padding:1px 7px;font-weight:700;font-size:.9em}
 .ctl{background:#1b1423;border-radius:10px;padding:8px 12px;margin-bottom:14px;font-size:.95rem;line-height:1.7}
 .card .btns{text-align:center}.big{font-size:1.15rem;margin:6px 0 12px}
+.size{display:flex;align-items:center;gap:8px;background:var(--stone);border:2px solid var(--line);border-radius:10px;padding:6px 12px;font-weight:600}
+.size input{accent-color:var(--torch);width:150px}.size b{color:var(--torch);min-width:3.4em}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -73,7 +77,7 @@ kbd{background:var(--ink);color:#2a1608;border-radius:5px;padding:1px 7px;font-w
   <h1>NDG Wumpus World</h1>
   <p>Find the gold, dodge the pits, outsmart NDG, and walk out alive.</p>
 </header>
-<div class="top"><button id="bRules">📜 Rules</button><button id="bNew">🔄 New cave (R)</button><button id="bMute">🔊 Sound</button></div>
+<div class="top"><button id="bRules">📜 Rules</button><button id="bNew">🔄 New cave (R)</button><button id="bMute">🔊 Sound</button><label class="size">Grid size <input id="size" type="range" min="5" max="20" value="5"> <b id="sizeLbl">5×5</b></label></div>
 
 <main class="wrap">
   <section>
@@ -102,7 +106,7 @@ kbd{background:var(--ink);color:#2a1608;border-radius:5px;padding:1px 7px;font-w
 <div id="ov"><div class="card" id="card"></div></div>
 
 <script>
-const N=5, D=[[0,1],[1,0],[0,-1],[-1,0]], $=id=>document.getElementById(id);
+let N=5;const D=[[0,1],[1,0],[0,-1],[-1,0]], $=id=>document.getElementById(id);
 const key=(r,c)=>r*N+c, lab=k=>String.fromCharCode(65+k%N)+(N-Math.floor(k/N));
 const nb=(r,c)=>[[r-1,c],[r+1,c],[r,c-1],[r,c+1]].filter(([a,b])=>a>=0&&b>=0&&a<N&&b<N);
 const shuf=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
@@ -112,13 +116,22 @@ let S=null, started=false, muted=false, AC=null, ovAct=null, cells=[];
 function snd(f1,f2,d,t='sine',v=.07){if(muted)return;try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();const o=AC.createOscillator(),g=AC.createGain(),n=AC.currentTime;o.type=t;o.frequency.setValueAtTime(f1,n);o.frequency.exponentialRampToValueAtTime(f2,n+d);g.gain.setValueAtTime(v,n);g.gain.exponentialRampToValueAtTime(.0001,n+d);o.connect(g).connect(AC.destination);o.start();o.stop(n+d)}catch(e){}}
 function say(t,p=1.7){if(muted||!window.speechSynthesis)return;try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.pitch=p;u.rate=1.1;u.volume=1;speechSynthesis.speak(u)}catch(e){}}
 
+/* ---------- grid size ---------- */
+function pitCount(){return Math.max(3,Math.round(N*N*.12))}
+function setSize(n){
+  N=n;const R=document.documentElement.style;R.setProperty('--n',N);R.setProperty('--bw',N>10?'min(94vw,700px)':'min(94vw,540px)');
+  document.body.classList.toggle('dense',N>12);
+  const g=$('grid');g.style.gridTemplateColumns=g.style.gridTemplateRows='repeat('+N+',1fr)';
+  const a=$('agent');a.style.width=a.style.height=(100/N)+'%';$('sizeLbl').textContent=N+'×'+N;
+}
+
 /* ---------- world ---------- */
 function gen(){
   for(;;){
     const st=[N-1,0], safe=new Set([key(...st),...nb(...st).map(p=>key(...p))]), free=[], all=[];
     for(let r=0;r<N;r++)for(let c=0;c<N;c++){all.push([r,c]);if(!safe.has(key(r,c)))free.push([r,c])}
     shuf(free);
-    const pits=new Set(free.slice(0,3).map(p=>key(...p))), w=free[3];
+    const P=pitCount(), pits=new Set(free.slice(0,P).map(p=>key(...p))), w=free[P];
     const rest=shuf(all.filter(p=>key(...p)!==key(...st)&&!pits.has(key(...p))&&key(...p)!==key(...w)));
     const gold=rest[0], arrow=rest[1];
     const seen=reach(st,pits,key(...w));
@@ -162,7 +175,7 @@ function render(){
     }
     e.children[0].textContent=pc;e.children[1].innerHTML=it;
   }
-  const a=$('agent');a.style.left=S.pos[1]*20+'%';a.style.top=S.pos[0]*20+'%';a.firstElementChild.style.transform='rotate('+S.d*90+'deg)';
+  const a=$('agent');a.style.left=S.pos[1]*100/N+'%';a.style.top=S.pos[0]*100/N+'%';a.firstElementChild.style.transform='rotate('+S.d*90+'deg)';
   const p=pcpt(...S.pos);
   [['pBreeze',p.breeze],['pStench',p.stench],['pGlitter',p.glitter],['pBump',S.bump],['pScream',S.scream]].forEach(([i,v])=>$(i).classList.toggle('on',!!v));
   $('sScore').textContent=S.score;$('sMoves').textContent=S.moves;$('sGold').textContent=S.hasGold?'yes 💰':'no';$('sArrow').textContent=S.arrows?'1 🏹':'0';
@@ -232,10 +245,10 @@ function win(){
 }
 
 /* ---------- overlay & input ---------- */
-const RULES='<h2>📜 NDG Wumpus World: Rules</h2><ol>'+
+const RULES=()=>'<h2>📜 NDG Wumpus World: Rules</h2><ol>'+
 '<li><b>Goal:</b> grab the 💰 gold, then reach the 🚪 exit door that opens after you take it.</li>'+
-'<li><b>The cave:</b> a 5×5 grid. You start at <b>A1</b> (bottom-left). Unexplored squares sit in fog.</li>'+
-'<li><b>Pits 🕳️</b> (3 of them): step in and you fall. Squares next to a pit have a <b>breeze 💨</b>.</li>'+
+'<li><b>The cave:</b> a '+N+'×'+N+' grid (change it with the Grid size slider, from 5×5 up to 20×20). You start at <b>A1</b> (bottom-left). Unexplored squares sit in fog.</li>'+
+'<li><b>Pits 🕳️</b> ('+pitCount()+' of them): step in and you fall. Squares next to a pit have a <b>breeze 💨</b>.</li>'+
 '<li><b>NDG the Wumpus 👹:</b> walk into its square and it eats you. Squares next to it have a <b>stench 🤢</b>.</li>'+
 '<li><b>Grabbing:</b> ✨ glitter means gold is on your square. Press <kbd>G</kbd> to grab it. The same <kbd>G</kbd> picks up the lone 🏹 arrow lying somewhere in the cave.</li>'+
 '<li><b>Shooting:</b> with the arrow, press <kbd>Space</kbd> to fire the way you’re facing (the yellow marker). Hit NDG and you’ll hear it scream. You only get one arrow.</li>'+
@@ -247,12 +260,13 @@ function showOv(html,act){$('card').innerHTML=html;$('ov').style.display='flex';
 function hideOv(){$('ov').style.display='none';ovAct=null}
 function begin(){started=true;hideOv();newGame();snd(300,600,.2,'triangle',.06)}
 function help(){
-  if(!started)return showOv(RULES+'<div class="btns"><button class="go" id="bGo">Start the adventure (Enter)</button></div>',begin);
-  showOv(RULES+'<div class="btns"><button class="go" id="bGo">Back to the cave (Enter)</button></div>',hideOv);
+  if(!started)return showOv(RULES()+'<div class="btns"><button class="go" id="bGo">Start the adventure (Enter)</button></div>',begin);
+  showOv(RULES()+'<div class="btns"><button class="go" id="bGo">Back to the cave (Enter)</button></div>',hideOv);
 }
 const KM={arrowright:0,d:0,arrowdown:1,s:1,arrowleft:2,a:2,arrowup:3,w:3};
 addEventListener('keydown',e=>{
   const k=e.key.toLowerCase();
+  if(e.target&&e.target.id==='size')return;
   if($('ov').style.display==='flex'){if(e.key==='Enter'&&ovAct){e.preventDefault();ovAct()}return}
   if(e.ctrlKey||e.metaKey||e.altKey)return;
   if(k in KM){e.preventDefault();move(KM[k])}
@@ -261,10 +275,12 @@ addEventListener('keydown',e=>{
   else if(k==='r')begin();
 });
 document.querySelectorAll('#pad button').forEach(b=>b.onclick=()=>{const k=b.dataset.k;if(k==='g')grab();else if(k==='shoot')shoot();else move({right:0,down:1,left:2,up:3}[k])});
+$('size').oninput=e=>{$('sizeLbl').textContent=e.target.value+'×'+e.target.value};
+$('size').onchange=e=>{setSize(+e.target.value);e.target.blur();begin()};
 $('bRules').onclick=help;$('bNew').onclick=begin;
 $('bMute').onclick=()=>{muted=!muted;$('bMute').textContent=muted?'🔇 Muted':'🔊 Sound';if(muted&&window.speechSynthesis)speechSynthesis.cancel()};
 
-grid();S={pits:new Set(),w:[-1,-1],gold:[-1,-1],arrow:[-1,-1],pos:[N-1,0],d:0,seen:new Set([key(N-1,0)]),score:0,moves:0,arrows:0,hasGold:false,arrowTaken:false,wAlive:true,exit:null,over:false,log:[]};
+setSize(5);grid();S={pits:new Set(),w:[-1,-1],gold:[-1,-1],arrow:[-1,-1],pos:[N-1,0],d:0,seen:new Set([key(N-1,0)]),score:0,moves:0,arrows:0,hasGold:false,arrowTaken:false,wAlive:true,exit:null,over:false,log:[]};
 render();help();
 </script>
 </body>
